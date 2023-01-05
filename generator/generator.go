@@ -9,13 +9,14 @@ import (
 	"github.com/popoffvg/go-mapstruct"
 	"github.com/popoffvg/go-mapstruct/converters"
 	"github.com/popoffvg/go-mapstruct/loader"
+	"github.com/popoffvg/go-mapstruct/templates"
 )
 
 type Config struct {
 	srcTypeName string
 	dstTypeName string
-	dstPkg      string
-	srcPkg      string
+	dstPkgPath  string
+	srcPkgPath  string
 	Dir         string
 }
 
@@ -23,7 +24,7 @@ type Generator struct {
 	cfg Config
 
 	loader    *loader.Loader
-	templates *TemplateManager
+	templates *templates.Manager
 }
 
 type TemplateSettings struct {
@@ -37,12 +38,6 @@ type TypeDefinition struct {
 	Name string
 }
 
-type TemplateManager struct{}
-
-func (m *TemplateManager) Process(settings []*mapstruct.FieldSettings) ([]byte, error) {
-	return nil, nil
-}
-
 func New(cfg Config) (*Generator, error) {
 	if err := cfg.init(); err != nil {
 		return nil, fmt.Errorf("init generator failed: %w", err)
@@ -51,16 +46,13 @@ func New(cfg Config) (*Generator, error) {
 	g := Generator{
 		cfg: cfg,
 	}
-	//TODO: stub
-	srcPath := "./"
-	dstPath := "./"
 
 	l := loader.New(cfg.Dir)
-	if err := l.Load(srcPath); err != nil {
+	if err := l.Load(cfg.srcPkgPath); err != nil {
 		return nil, err
 	}
 
-	if err := l.Load(dstPath); err != nil {
+	if err := l.Load(cfg.dstPkgPath); err != nil {
 		return nil, err
 	}
 
@@ -73,11 +65,11 @@ func (g *Generator) Generate(w io.Writer) ([]mapstruct.FieldSettings, error) {
 		src, dst *ast.StructType
 		err      error
 	)
-	if src, err = g.loader.FindType(g.cfg.srcPkg, g.cfg.srcTypeName); err != nil {
+	if src, err = g.loader.FindType(g.cfg.srcPkgPath, g.cfg.srcTypeName); err != nil {
 		return nil, err
 	}
 
-	if dst, err = g.loader.FindType(g.cfg.dstPkg, g.cfg.dstTypeName); err != nil {
+	if dst, err = g.loader.FindType(g.cfg.dstPkgPath, g.cfg.dstTypeName); err != nil {
 		return nil, err
 	}
 
@@ -92,5 +84,14 @@ func (g *Generator) Generate(w io.Writer) ([]mapstruct.FieldSettings, error) {
 
 func (c *Config) init() (err error) {
 	c.Dir, err = filepath.Abs(c.Dir)
-	return err
+	if err != nil {
+		return err
+	}
+	if c.srcPkgPath == "" {
+		c.srcPkgPath = "./"
+	}
+	if c.dstPkgPath == "" {
+		c.dstPkgPath = "./"
+	}
+	return nil
 }

@@ -50,7 +50,7 @@ func New(dir string) *Loader {
 // Load loads package by its import path
 func (l *Loader) Load(path string) error {
 
-	pkgs, err := packages.Load(l.cfg, path)
+	pkgs, err := packages.Load(l.cfg, filepath.Join(l.dir, path))
 	if err != nil {
 		return err
 	}
