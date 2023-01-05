@@ -1,0 +1,17 @@
+package converter
+
+// TODO: generate
+func {{.From.Type}}To{{.To.Type}}(src .From.Type) {{dst .To.Type}}{
+    {{$field := range .To.Fields}}
+        {{if and $field.IsArray (not $field.CustomConverter)}}
+            dstArr := make({{$field.To.Type}}, len(src.{{$field.From.Name}}))
+            for i := range src.{{$field.From.Name}} {
+                {{$field.ConvertArray src dstArr i}}
+            }
+            dst.{{$field.To.Name}} = dstArr
+        {{else}}
+            {{$field.Convert src dst}}
+        {{end}}
+    {{end}}
+    return dst
+}
