@@ -1,0 +1,6 @@
+package converter
+
+    var dst {{.To.Type}}
+    {{$field := range .To.Fields}}
+        {{$field.TransformFn}}
+    {{end}}
