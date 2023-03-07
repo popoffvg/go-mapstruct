@@ -3,7 +3,6 @@ package generator
 import (
 	"fmt"
 	"go/ast"
-	"io"
 	"path/filepath"
 
 	"github.com/popoffvg/go-mapstruct"
@@ -13,10 +12,10 @@ import (
 )
 
 type Config struct {
-	srcTypeName string
-	dstTypeName string
-	dstPkgPath  string
-	srcPkgPath  string
+	SrcTypeName string
+	DstTypeName string
+	DstPkg      string
+	SrcPkg      string
 	Dir         string
 }
 
@@ -47,12 +46,15 @@ func New(cfg Config) (*Generator, error) {
 		cfg: cfg,
 	}
 
-	l := loader.New(cfg.Dir)
-	if err := l.Load(cfg.srcPkgPath); err != nil {
+	l, err := loader.New(cfg.Dir)
+	if err != nil {
+		return nil, err
+	}
+	if err := l.Load(cfg.SrcPkg); err != nil {
 		return nil, err
 	}
 
-	if err := l.Load(cfg.dstPkgPath); err != nil {
+	if err := l.Load(cfg.DstPkg); err != nil {
 		return nil, err
 	}
 
@@ -60,16 +62,16 @@ func New(cfg Config) (*Generator, error) {
 	return &g, nil
 }
 
-func (g *Generator) Generate(w io.Writer) ([]mapstruct.FieldSettings, error) {
+func (g *Generator) Run() ([]mapstruct.FieldSettings, error) {
 	var (
 		src, dst *ast.StructType
 		err      error
 	)
-	if src, err = g.loader.FindType(g.cfg.srcPkgPath, g.cfg.srcTypeName); err != nil {
+	if src, err = g.loader.FindType(g.cfg.SrcPkg, g.cfg.SrcTypeName); err != nil {
 		return nil, err
 	}
 
-	if dst, err = g.loader.FindType(g.cfg.dstPkgPath, g.cfg.dstTypeName); err != nil {
+	if dst, err = g.loader.FindType(g.cfg.DstPkg, g.cfg.DstTypeName); err != nil {
 		return nil, err
 	}
 
@@ -87,11 +89,11 @@ func (c *Config) init() (err error) {
 	if err != nil {
 		return err
 	}
-	if c.srcPkgPath == "" {
-		c.srcPkgPath = "./"
+	if c.SrcPkg == "" {
+		c.SrcPkg = "./"
 	}
-	if c.dstPkgPath == "" {
-		c.dstPkgPath = "./"
+	if c.DstPkg == "" {
+		c.DstPkg = "./"
 	}
 	return nil
 }

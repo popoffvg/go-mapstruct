@@ -37,8 +37,10 @@ func TestConverters(t *testing.T) {
 }
 
 func (s *FieldSuite) SetupSuite() {
-	s.l = loader.New("./")
-	s.Require().NoError(s.l.Load("./"))
+	var err error
+	s.l, err = loader.New(".")
+	s.Require().NoError(err)
+	s.Require().NoError(s.l.Load("converters"))
 }
 
 func (s *FieldSuite) TestConvertSimpleType() {

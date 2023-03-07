@@ -8,6 +8,11 @@ require (
 )
 
 require (
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/kisielk/godepgraph v0.0.0-20221115040737-2d0831789458 // indirect
+)
+
+require (
 	cloud.google.com/go v0.100.2 // indirect
 	cloud.google.com/go/compute v1.6.1 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
@@ -180,6 +185,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/softlayer/softlayer-go v0.0.0-20180806151055-260589d94c7d // indirect
 	github.com/sony/gobreaker v0.4.2-0.20210216022020-dd874f9dd33b // indirect
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect

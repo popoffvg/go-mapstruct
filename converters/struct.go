@@ -6,7 +6,7 @@ import (
 	"go/types"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/popoffvg/go-mapstruct"
+	mapstruct "github.com/popoffvg/go-mapstruct"
 	"github.com/popoffvg/go-mapstruct/loader"
 )
 

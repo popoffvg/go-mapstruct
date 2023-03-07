@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"bytes"
 	"fmt"
 	. "net"
 	"testing"
@@ -24,16 +23,15 @@ type dst struct {
 func TestSimpleStruct(t *testing.T) {
 	cfg := Config{
 		Dir:         ".", // TODO: stub
-		srcTypeName: "src",
-		dstTypeName: "dst",
+		SrcTypeName: "src",
+		DstTypeName: "dst",
 		// TODO: pkg with same names
-		srcPkgPath: ".",
-		dstPkgPath: ".",
+		SrcPkg: "generator",
+		DstPkg: "generator",
 	}
 	g, err := New(cfg)
 	require.NoError(t, err, fmt.Sprintf("cfg: %#v", cfg))
 
-	b := bytes.NewBuffer(make([]byte, 0))
-	_, err = g.Generate(b)
+	_, err = g.Run()
 	assert.Error(t, err)
 }

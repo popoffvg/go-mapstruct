@@ -7,13 +7,15 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"github.com/popoffvg/go-mapstruct/helpers"
 	"golang.org/x/tools/go/packages"
 )
 
-var errPackageNotFound = fmt.Errorf("package not found")
+var errPackageLoadFailed = fmt.Errorf("packages load failed")
 
 type (
 	Loader struct {
@@ -29,11 +31,17 @@ type (
 	}
 )
 
-func New(dir string) *Loader {
+func New(dir string) (_ *Loader, err error) {
 	info := &types.Info{
 		Types: make(map[ast.Expr]types.TypeAndValue),
 	}
-	return &Loader{
+	dir, err = filepath.Abs(dir)
+	if err != nil {
+		errPackageLoadFailed = err
+		return &Loader{}, fmt.Errorf("failed get absolute path for %s: %w", dir, err)
+	}
+
+	l := &Loader{
 		types: info,
 		fs:    token.NewFileSet(),
 		dir:   dir,
@@ -45,25 +53,19 @@ func New(dir string) *Loader {
 			Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps,
 		},
 	}
+
+	err = l.loadRecursively()
+	if err != nil {
+		return l, err
+	}
+	return l, nil
 }
 
 // Load loads package by its import path
-func (l *Loader) Load(path string) error {
-
-	pkgs, err := packages.Load(l.cfg, filepath.Join(l.dir, path))
-	if err != nil {
-		return err
+func (l *Loader) Load(path string) (err error) {
+	if len(l.pkgs) < 1 {
+		return errPackageLoadFailed
 	}
-
-	if len(pkgs) < 1 {
-		return errPackageNotFound
-	}
-
-	if len(pkgs[0].Errors) > 0 {
-		return pkgs[0].Errors[0]
-	}
-
-	l.pkgs[path] = pkgs[0]
 
 	currentAST, err := l.loadAST(path)
 	if err != nil {
@@ -116,12 +118,14 @@ func (l *Loader) loadAST(path string) (*ast.Package, error) {
 		p   *packages.Package
 		ok  bool
 	)
-	if p, ok = l.pkgs[path]; ok {
-		dir = Dir(p)
+	if p, ok = l.pkgs[path]; !ok {
+		return nil, fmt.Errorf("not found pkg: %s", path)
 	}
+	dir = Dir(p)
+
 	pkgs, err := parser.ParseDir(l.fs, dir, nil, parser.DeclarationErrors|parser.ParseComments)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load ast failed for %s(package) in %s (directory): %w", path, dir, err)
 	}
 
 	if ap, ok := pkgs[p.Name]; ok {
@@ -146,9 +150,9 @@ func (l *Loader) FindType(pkg, name string) (*ast.StructType, error) {
 	a, ok := l.ast[pkg]
 	if !ok {
 		return nil, fmt.Errorf(
-			"ast for package:%s not found. Loaded pkgs: %#v",
+			"ast for package:%s not found. Loaded pkgs: %s",
 			pkg,
-			helpers.ToArray(l.ast),
+			pkgNames(helpers.ToArray(l.ast)),
 		)
 	}
 	for _, f := range a.Files {
@@ -165,6 +169,14 @@ func (l *Loader) FindType(pkg, name string) (*ast.StructType, error) {
 	return nil, fmt.Errorf("type %s not found", name)
 }
 
+func pkgNames(packages []*ast.Package) string {
+	var r []string
+	for _, p := range packages {
+		r = append(r, p.Name)
+	}
+	return strings.Join(r, ", ")
+}
+
 func typeSpecs(f *ast.File) []*ast.TypeSpec {
 	var result []*ast.TypeSpec
 
@@ -179,4 +191,33 @@ func typeSpecs(f *ast.File) []*ast.TypeSpec {
 	}
 
 	return result
+}
+
+func (l *Loader) loadRecursively() error {
+	return filepath.WalkDir(l.dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed load packages: %w", err)
+		}
+		if !d.IsDir() {
+			return nil
+		}
+
+		if strings.HasPrefix(d.Name(), ".") {
+			return filepath.SkipDir
+		}
+
+		pkgs, err := packages.Load(l.cfg, path)
+		if err != nil {
+			return fmt.Errorf("failed load packages: %w", err)
+		}
+
+		if len(pkgs) != 1 || pkgs[0].Name == "" {
+			// dir with only subdirectories or without *.go files
+			return nil
+		}
+
+		l.pkgs[pkgs[0].Name] = pkgs[0]
+
+		return nil
+	})
 }
